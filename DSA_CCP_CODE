@@ -1,88 +1,99 @@
-import java.util.*;
+import javafx.application.Application;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.layout.GridPane;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
-class Student {
-    String rollNo;
-    String department;
+import java.util.ArrayList;
+import java.util.List;
 
-    public Student(String rollNo, String department) {
-        this.rollNo = rollNo;
-        this.department = department;
-    }
+public class Main extends Application {
 
+    // Sample list of departments and students
+    private static final String[] departments = {"Computer Science", "Mathematics", "Physics", "Biology"};
+    private static final int totalStudents = 40;  // Total number of students in the classroom
+    private static final int rows = 5;  // Number of rows in the classroom
+    private static final int columns = 8;  // Number of columns in the classroom
+    
     @Override
-    public String toString() {
-        return rollNo + " (" + department + ")";
-    }
-}
+    public void start(Stage primaryStage) {
+        // Create a GridPane to represent the seating arrangement
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
 
-class ClassroomOrganizer {
-    int rows, cols;
-    Student[][] seats;
-    HashMap<String, Queue<Student>> deptMap = new HashMap<>();
+        // List to hold all students in Round-Robin order
+        List<String> students = generateStudents();
 
-    public ClassroomOrganizer(int rows, int cols) {
-        this.rows = rows;
-        this.cols = cols;
-        this.seats = new Student[rows][cols];
-    }
+        // Fill the grid with the students' department names
+        fillGridWithZigzagPattern(grid, students);
 
-    public void addStudent(Student student) {
-        deptMap.putIfAbsent(student.department, new LinkedList<>());
-        deptMap.get(student.department).add(student);
+        // Set up the scene and stage
+        Scene scene = new Scene(grid, 600, 400);
+        primaryStage.setTitle("Student Seating Arrangement");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
-    public void assignSeats() {
-        List<Queue<Student>> deptQueues = new ArrayList<>(deptMap.values());
-        int deptCount = deptQueues.size();
+    // Generates the list of students from departments (Round-Robin Scheduling)
+    private List<String> generateStudents() {
+        List<String> students = new ArrayList<>();
+        
+        int studentCountPerDepartment = totalStudents / departments.length;
+        int extraStudents = totalStudents % departments.length;
+        
+        // Round-Robin distribution of students
+        for (int i = 0; i < departments.length; i++) {
+            int studentsInDept = studentCountPerDepartment + (i < extraStudents ? 1 : 0);
+            for (int j = 0; j < studentsInDept; j++) {
+                students.add(departments[i]);
+            }
+        }
+        
+        return students;
+    }
+
+    // Fills the grid with the students' departments following the Zigzag Pattern
+    private void fillGridWithZigzagPattern(GridPane grid, List<String> students) {
         int index = 0;
 
-        // Loop through all seats
-        for (int i = 0; i < rows; i++) {
-            int start = (i % 2 == 0) ? 0 : cols - 1;
-            int end = (i % 2 == 0) ? cols : -1;
-            int step = (i % 2 == 0) ? 1 : -1;
-
-            // Assign students to the seats
-            for (int j = start; j != end; j += step) {
-                int qIndex = index % deptCount;
-                while (deptQueues.get(qIndex).isEmpty()) {
-                    qIndex = (qIndex + 1) % deptCount;
+        for (int row = 0; row < rows; row++) {
+            // For zigzag pattern, alternate the direction of filling each row
+            if (row % 2 == 0) {
+                // Fill from left to right
+                for (int col = 0; col < columns; col++) {
+                    if (index < students.size()) {
+                        Text studentText = new Text(students.get(index));
+                        grid.add(studentText, col, row);
+                        index++;
+                    }
                 }
-                seats[i][j] = deptQueues.get(qIndex).poll();
-                index++;
-                if (index >= rows * cols) { // Stop if we run out of seats
-                    return;
+            } else {
+                // Fill from right to left
+                for (int col = columns - 1; col >= 0; col--) {
+                    if (index < students.size()) {
+                        Text studentText = new Text(students.get(index));
+                        grid.add(studentText, col, row);
+                        index++;
+                    }
                 }
             }
         }
-    }
 
-    public void printSeats() {
-        System.out.println("\n--- Seating Arrangement ---");
-        for (Student[] row : seats) {
-            for (Student s : row) {
-                System.out.print((s != null ? s : "Empty") + " | ");
-            }
-            System.out.println();
+        // Show an alert if there are more students than the grid can handle
+        if (index < students.size()) {
+            Alert alert = new Alert(AlertType.WARNING);
+            alert.setTitle("Warning");
+            alert.setHeaderText("Excess Students");
+            alert.setContentText("There are more students than available seats in the grid.");
+            alert.showAndWait();
         }
     }
-}
 
-public class Main {
     public static void main(String[] args) {
-        ClassroomOrganizer organizer = new ClassroomOrganizer(3, 4);
-
-        organizer.addStudent(new Student("BSCS01", "CS"));
-        organizer.addStudent(new Student("BSCS02", "CS"));
-        organizer.addStudent(new Student("BSAI01", "AI"));
-        organizer.addStudent(new Student("BSAI02", "AI"));
-        organizer.addStudent(new Student("BSSE01", "SE"));
-        organizer.addStudent(new Student("BSSE02", "SE"));
-        organizer.addStudent(new Student("BSCS03", "CS"));
-        organizer.addStudent(new Student("BSAI03", "AI"));
-        organizer.addStudent(new Student("BSSE03", "SE"));
-
-        organizer.assignSeats();
-        organizer.printSeats();
+        launch(args);
     }
 }
+
